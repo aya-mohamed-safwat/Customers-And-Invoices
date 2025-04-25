@@ -16,95 +16,87 @@ use Illuminate\Support\Arr;
 
 class InvoiceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+    
     public function index(Request $request)
     {
-        $filter = new InvoiceFilter();
-        $queryItem = $filter->transform($request);
+        try{
+        $filter = (new InvoiceFilter())->transform($request);
+         $invoices= new InvoiceCollection(Invoice::where($filter)->paginate());
+         return response()->json([
+            'status' => 'success',
+            'message' => 'invoices fetched successfully',
+            'data' => $invoices,
+        ], 200);
 
-        if(count($queryItem)==0){
-            return new InvoiceCollection(Invoice::paginate());
+        }catch(\Throwable $e){
+            return response()->json([
+                'status' => 'failed',
+                'message' => 'invoices fetched failed',
+            ], 500);
         }
-        else{
-            return new InvoiceCollection(Invoice::where($queryItem)->paginate());
-        }
+        
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \App\Http\Requests\StoreInvoiceRequest  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(StoreInvoiceRequest $request)
-    {
-        //
-    }
 
     public function bulkStore(BulkStoreInvoiceRequest $request)
     {
-        Invoice::insert($request->all());
-        return respone()->json([
-            'massage'=>'Invoices are added'
-        ]);
+        try {
+            $invoice= new InvoiceResource(Invoice::insert($request->validated()));
+    
+            return response()->json([
+                'status' => 'success',
+                'message' => 'invices inserted successfully.',
+                'data' => $invoice,
+            ], 201);
+        }
+        catch(\Throwable $e){
+            return response()->json([
+            'status' => 'failed',
+            'message' => 'failed to add invoices.',
+        ], 500);
+    }
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Invoice $invoice)
+ 
+    public function show($invoiceId)
     {
-        return new InvoiceResource($invoice);
+        $invoice = $this->findById($invoiceId);
+        if ($invoice instanceof \Illuminate\Http\JsonResponse) {
+            return $invoice;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Get invoice.',
+            'data'=> new InvoiceResource($invoice),
+        ], 200);
+    }
+    
+    public function destroy($invoiceId)
+    {
+        $invoice = $this->findById($invoiceId);
+        if ($invoice instanceof \Illuminate\Http\JsonResponse) {
+            return $invoice;
+        }
+        $invoice->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'invoice deleted successfully',
+        ],200);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Invoice $invoice)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \App\Http\Requests\UpdateInvoiceRequest  $request
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
-     */
-    public function update(UpdateInvoiceRequest $request, Invoice $invoice)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Invoice $invoice)
-    {
-        //
+    public function findById($invoiceId){
+        $invoice=Invoice::find($invoiceId);
+        if(!$invoice){
+            return response()->json([
+                'status' => 'Failed',
+                'message' => 'invoices not found.',
+            ], 404);
+        }
+        else {
+            return $invoice;
+        }
     }
 }

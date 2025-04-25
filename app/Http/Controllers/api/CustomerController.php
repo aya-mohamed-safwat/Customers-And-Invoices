@@ -9,99 +9,134 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\v1\CustomerResource;
 use App\Http\Resources\v1\CustomerCollection;
 use App\Filters\CustomersFilter;
+use App\Http\Requests\FilterCustomerRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index(Request $request)
+    public function index(FilterCustomerRequest $request)
     {
-        $filter = new CustomersFilter();
-        $filterItem = $filter->transform($request);
-        $customer = Customer::where($filterItem);
-        $includeInvoices = $request->query('IncludeInvoices');  
+        try {
+        $filters = (new CustomersFilter())->transform($request);
+       
+        $customer = Customer::where($filters);
 
-        if($includeInvoices){
-            $customer=$customer->with('invoices');
+        if($request->boolean('IncludeInvoices')){
+            $customer->with('invoices');
         }
-            return new CustomerCollection($customer->paginate()->appends($request->query()));
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Customers fetched successfully',
+            'data' => new CustomerCollection($customer->paginate()->appends($request->query())),
+        ], 200);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'failed',
+            'message' => 'Something went wrong while fetching customers.',
+        ], 500);
+    }
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-  
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \App\Http\Requests\StoreCustomerRequest  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(StoreCustomerRequest $request)
     {
-       $user= new CustomerResource(Customer::create($request->all()));
+        try {
+        $customer= new CustomerResource(Customer::create($request->validated()));
+
         return response()->json([
-            'massage'=>'User is created Successfully',
-            'data' =>$user
-        ]);
+            'status' => 'success',
+            'message' => 'Customer created successfully.',
+            'data' => $customer,
+        ], 201);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'Failed',
+            'message' => 'Failed to create customer.'. $e->getMessage(),
+            'data' => null,
+        ], 500);
+    }
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Customer  $customer
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Request $request,Customer $customer)
+    public function show(Request $request , $customerId)
     {
-        $includeInvoices = $request->query('IncludeInvoices');
-        if($includeInvoices){
-            return new CustomerResource($customer->LoadMissing('invoices'));
+        $customer = $this->findById($customerId);
+        if ($customer instanceof \Illuminate\Http\JsonResponse) {
+            return $customer;
         }
-        return new CustomerResource($customer);
-    }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Customer  $customer
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Customer $customer)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \App\Http\Requests\UpdateCustomerRequest  $request
-     * @param  \App\Models\Customer  $customer
-     * @return \Illuminate\Http\Response
-     */
-    public function update(UpdateCustomerRequest $request, Customer $customer)
-    {
-        $user =$customer ->update($request->all());
+        $includeInvoices = $request->query('IncludeInvoices',false);
+        if($includeInvoices){
+            $customer= $customer->Load('invoices');
+        }
         return response()->json([
-            'massage'=>'User is updated Successfully',
-        ]);
+            'status' => 'success',
+            'message' => 'Get Customer.',
+            'data'=> new CustomerResource($customer),
+        ], 200);
+       
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Customer  $customer
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Customer $customer)
+    
+
+    public function update(UpdateCustomerRequest $request, $customerId)
     {
-        //
+        $customer=$this->findById($customerId);
+        if ($customer instanceof \Illuminate\Http\JsonResponse) {
+            return $customer;
+        }
+        
+        DB::beginTransaction();
+        try {  
+            $customer->update($request->validated());
+    
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'customer is updated Successfully',
+                'data' => new CustomerResource($customer),
+            ],200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+    
+            return response()->json([
+                'status' => 'Failed',
+                'message' => ' Failed to update customer'. $e->getMessage(),
+                'data' => null
+            ],500);
+        }
+    }
+
+    public function destroy($customerId)
+    {
+        $customer = $this->findById($customerId);
+        if ($customer instanceof \Illuminate\Http\JsonResponse) {
+            return $customer;
+        }
+
+        $customer->invoices()->delete();
+        $customer->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Customer and related invoices deleted successfully',
+        ],200);
+    }
+
+    public function findById($customerId){
+        $customer=Customer::find($customerId);
+        if(!$customer){
+            return response()->json([
+                'status' => 'Failed',
+                'message' => 'Customer not found.',
+            ], 404);
+        }
+        else {
+            return $customer;
+        }
     }
 }

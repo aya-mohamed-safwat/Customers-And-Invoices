@@ -31,6 +31,19 @@ class ApiFilter{
         return $eloQuery;
 
     }    
+
+    /*
+      public function transform(Request $request)
+    {
+  $eloQuery = array_merge($eloQuery, array_map(function ($operator) use ($column, $query) {
+              
+                return isset($query[$operator]) ? [$column, $this->operatorMap[$operator], $query[$operator]] : null;
+            }, $operators));
+        }
+
+        return array_filter($eloQuery);
+    }
+    */
             
             
 }
