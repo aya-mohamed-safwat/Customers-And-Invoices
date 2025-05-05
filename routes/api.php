@@ -2,22 +2,29 @@
 
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\InvoiceController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\AuthController;
 use Illuminate\Support\Facades\Route;
 
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::group([ 'middleware' => 'api',], function ($router) {
+
+Route::post('register', [AuthController::class,"register"]);
+    Route::post('confirmOtp', [AuthController::class,"confirmOtp"]);
+    Route::post('resendOtp',[ AuthController::class,"resendOtp"]);
+    Route::post('forgetPassword', [AuthController::class,"forgetPassword"]);
+    Route::post('resetPassword', [AuthController::class,"resetPassword"]);
+    Route::post('login', [AuthController::class,"login"]);
+
 });
 
-Route::post("login",[App\Http\Controllers\api\AuthController::class,"login"]);
-Route::post("register",[App\Http\Controllers\api\AuthController::class,"register"]);
-Route::post("logout",[App\Http\Controllers\api\AuthController::class,"logout"])->middleware("auth:sanctum");
+Route::group(['middleware'=>'auth:api'],function () {
+    Route::post('refresh', [App\Http\Controllers\api\AuthController::class,"refresh"]);
+    Route::post('logout', [App\Http\Controllers\api\AuthController::class,"logout"]);
 
-
-Route::group(['middleware'=>'auth:sanctum'],function () {
     Route::apiResource('customers', CustomerController::class);
 
     Route::apiResource('invoices', InvoiceController::class);
+    Route::get('invoices/{id}');
     Route::post('invoices/bulk', ['uses'=>'InvoiceController@bulkStore']);
 });
+//http://127.0.0.1:8025/

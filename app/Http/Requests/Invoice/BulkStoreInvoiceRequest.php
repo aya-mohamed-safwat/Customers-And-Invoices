@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Invoice;
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,10 +13,7 @@ class BulkStoreInvoiceRequest extends FormRequest
      */
     public function authorize()
     {
-        $user=$this->user();
-    
-        return $user != null && $user->tokenCan('create');
-    }
+        return true;    }
 
     /**
      * Get the validation rules that apply to the request.

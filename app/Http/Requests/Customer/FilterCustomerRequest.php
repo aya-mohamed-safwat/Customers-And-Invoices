@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Customer;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,10 +13,7 @@ class FilterCustomerRequest extends FormRequest
      */
     public function authorize()
     {
-        $user=$this->user();
-    
-        return $user != null && $user->tokenCan('update');
-    }
+        return true;    }
 
     /**
      * Get the validation rules that apply to the request.

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Customer;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -14,9 +14,7 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function authorize()
     {
-        $user=$this->user();
-    
-        return $user != null && $user->tokenCan('update');
+        return true;
     }
 
     public function rules()

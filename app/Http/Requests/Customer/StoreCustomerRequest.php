@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Customer;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -14,10 +14,7 @@ class StoreCustomerRequest extends FormRequest
      */
     public function authorize()
     {
-        $user=$this->user();
-    
-        return $user != null && $user->tokenCan('create');
-    }
+        return true;    }
 
     /**
      * Get the validation rules that apply to the request.

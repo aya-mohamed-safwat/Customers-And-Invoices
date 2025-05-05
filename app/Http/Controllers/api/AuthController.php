@@ -2,64 +2,54 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use Illuminate\Http\Request;
+use App\Services\Auth\AuthService;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\Auth\{LoginRequest,RegisterRequest,ResetPasswordRequest,OtpRequest};
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
+    protected $authService;
 
-    public function register(Request $request){
-        $user=User::Create([
-            'name'=>$request->name,
-            'email'=>$request->email,
-            'password'=>Hash::make($request->password),
-            'role'=>$request->role,
-        ]);
-
-        if($request['role']=='admin'){
-        $token=$user->createToken('adminToken',['create','update','delete'])->plainTextToken;
-        }
-
-        else
-        {
-            $token = $user->createToken('basicToken')->plainTextToken;
-        }
-        return response()->json([
-            'user'=>$user,
-        'token'=>$token]);
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+        $this->middleware('auth:api', ['except' => 
+        ['login','register','confirmOtp','resendOtp','forgetPassword','resetPassword']]);
     }
 
-    
-    public function login(Request $request){
-        $userDetals=$request->only('email','password');
+    public function register(RegisterRequest $request){
+        return $this->authService->register($request->email,$request->validated());
+    }
 
-        if(Auth::attempt($userDetals)){
-            $user = Auth::user();
-            $role = $user->role;
-            if($role=='admin'){
-                /** @var \App\Models\MyUserModel $user **/
-                $token=$user->createToken('adminToken',['create','update','delete'])->plainTextToken;
-                }
-                else
-                {
-                    /** @var \App\Models\MyUserModel $user **/
-                    $token = $user->createToken('basicToken')->plainTextToken;
-                }
-                return response()->json([
-                'token'=>$token]);
-            }
-            else
-            {
-                return response()->json([
-                    'User not registed']);
-            }
+    public function confirmOtp(OtpRequest $request){
+        return $this->authService->confirmOtp($request->otp,$request->email);
+    }
 
-        }
-    
-    
-    public function destroy(User $user)
-    {}
+    public function resendOtp(Request $request){
+        return $this->authService->resendOtp($request->email);
+    }
+
+    public function forgetPassword(Request $request){
+        return $this->authService->forgetPassword($request->email);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request){
+        return $this->authService->resetPasswordViaOtp($request->code ,$request->email, $request->password);
+    }
+
+    public function login(LoginRequest $request){
+        return $this->authService->login($request->only('email', 'password'));
+    }
+
+    public function logout() {
+        return $this->authService->logout();
+    }
+
+    public function refresh(){
+         return $this->authService->refreshToken();
+    }
+
+
+
 }
